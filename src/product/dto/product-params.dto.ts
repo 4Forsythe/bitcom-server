@@ -6,6 +6,7 @@ export enum ProductSortEnum {
 }
 
 export class ProductParamsDto {
+	ids?: string[]
 	name?: string
 	categoryId?: string
 	deviceId?: string

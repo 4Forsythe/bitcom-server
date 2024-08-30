@@ -5,7 +5,8 @@ import {
 	Patch,
 	Delete,
 	Body,
-	Param
+	Param,
+	Query
 } from '@nestjs/common'
 
 import { UserService } from './user.service'
@@ -32,6 +33,11 @@ export class UserController {
 	@Get(':id')
 	getOne(@Param('id') id: string) {
 		return this.userService.getOne(id)
+	}
+
+	@Get()
+	getByEmail(@Query() dto: { email: string }) {
+		return this.userService.getByEmail(dto.email)
 	}
 
 	@Patch('me')

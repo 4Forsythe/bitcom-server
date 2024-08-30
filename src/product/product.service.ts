@@ -2,26 +2,55 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 
 import { PrismaService } from 'src/prisma.service'
 import { ProductParamsDto } from './dto/product-params.dto'
+import { switchKeyboard } from './utils/switch-keyboard.utils'
 
 @Injectable()
 export class ProductService {
 	constructor(private prisma: PrismaService) {}
 
 	async getAll(params?: ProductParamsDto) {
-		const { sortBy, orderBy, take, skip } = params
+		const {
+			name,
+			categoryId,
+			deviceId,
+			brandId,
+			modelId,
+			sortBy,
+			orderBy,
+			take,
+			skip
+		} = params
+
+		const { ru, en } = switchKeyboard(name || '')
+
+		const whereOr = [
+			...(name ? [{ name: { contains: name } }] : []),
+			{ name: { contains: ru } },
+			{ name: { contains: en } }
+		]
 
 		const products = await this.prisma.product.findMany({
+			where: {
+				OR: whereOr,
+				...(categoryId && { categoryId }),
+				...(deviceId && { deviceId }),
+				...(brandId && { brandId }),
+				...(modelId && { modelId })
+			},
 			take: +take || 20,
 			skip: +skip || 0,
 			orderBy: {
-				[sortBy]: orderBy
+				...(sortBy &&
+					orderBy && {
+						[sortBy]: orderBy
+					})
 			},
 			select: {
 				id: true,
 				name: true,
 				price: true,
 				count: true,
-				barcodes: true,
+				barcode: true,
 				category: true,
 				device: true,
 				brand: true,
@@ -29,7 +58,15 @@ export class ProductService {
 			}
 		})
 
-		const count = await this.prisma.product.count()
+		const count = await this.prisma.product.count({
+			where: {
+				OR: whereOr,
+				...(categoryId && { categoryId }),
+				...(deviceId && { deviceId }),
+				...(brandId && { brandId }),
+				...(modelId && { modelId })
+			}
+		})
 
 		return { items: products, count }
 	}
@@ -42,7 +79,7 @@ export class ProductService {
 				name: true,
 				price: true,
 				count: true,
-				barcodes: true,
+				barcode: true,
 				category: true,
 				device: true,
 				brand: true,
@@ -50,7 +87,11 @@ export class ProductService {
 			}
 		})
 
-		return products
+		const count = await this.prisma.product.count({
+			where: { id: { in: ids } }
+		})
+
+		return { items: products, count }
 	}
 
 	async getOne(id: string) {
@@ -61,7 +102,7 @@ export class ProductService {
 				name: true,
 				price: true,
 				count: true,
-				barcodes: true,
+				barcode: true,
 				category: true,
 				device: true,
 				brand: true,

@@ -8,123 +8,145 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   
   name      String?
-  phone     String   @unique
-  role      Boolean  @default(false)
-  isActive  Boolean  @default(false) @map("is_active")
+  email     String      @unique
+  phone     String?
+  password  String
+  role      Boolean     @default(false)
+  isActive  Boolean     @default(false) @map("is_active")
 
   cart      Cart[]
-  code      Code?
+  wishlist  WishList[]
+  orders    Order[]
   posts     Post[]
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
 
   @@map("users")
 }
 
-model Code {
-  id        String   @id @default(cuid())
+model UserCode {
+  id            String    @id @default(cuid())
 
-  code      Int
-  userId    String   @unique @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code          Int
+  attempt       Int       @default(0)
+  email         String    @unique
 
-  createdAt DateTime @default(now()) @map("created_at")
-  expiresAt DateTime @map("expires_at")
+  lastAttemptAt DateTime  @map("last_attempt_at")
 
-  @@map("codes")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  expiresAt     DateTime  @map("expires_at")
+
+  @@map("activation_codes")
 }
 
 model Cart {
-  id        String    @id @default(cuid())
+  id          String    @id @default(cuid())
 
-  userId    String    @map("user_id")
-  productId String    @map("product_id")
-  count     Int
+  userId      String    @map("user_id")
+  productId   String    @map("product_id")
+  count       Int
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   @@map("carts")
 }
 
+model WishList {
+  id          String    @id @default(cuid())
+
+  userId      String    @map("user_id")
+  productId   String    @map("product_id")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("wish_lists")
+}
+
 model Post {
-  id        String   @id @default(cuid())
+  id          String   @id @default(cuid())
 
-  title     String
-  content   String
-  views     Int      @default(0)
-  userId    String?  @map("user_id")
-  user      User?    @relation(fields: [userId], references: [id])
+  title       String
+  content     String
+  imageUrl    String?
+  views       Int      @default(0)
+  userId      String?  @map("user_id")
+  user        User?    @relation(fields: [userId], references: [id])
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("posts")
 }
 
 model Brand {
-  id        String     @id @default(cuid())
+  id          String     @id @default(cuid())
 
-  name      String
-  products  Product[]
-  discounts Discount[]
+  name        String
+  products    Product[]
+  discounts   Discount[]
 
   @@map("brands")
 }
 
 model Device {
-  id        String     @id @default(cuid())
+  id          String     @id @default(cuid())
 
-  name      String
-  products  Product[]
-  discounts Discount[]
+  name        String
+  products    Product[]
+  discounts   Discount[]
 
   @@map("devices")
 }
 
 model Discount {
-  id         String           @id @default(cuid())
+  id          String           @id @default(cuid())
 
-  dateBegin  DateTime?        @map("date_begin")
-  dateEnd    DateTime?        @map("date_end")
-  percent    String
+  dateBegin   DateTime?        @map("date_begin")
+  dateEnd     DateTime?        @map("date_end")
+  percent     String
 
-  categoryId String?          @map("category_id")
-  deviceId   String?          @map("device_id")
-  brandId    String?          @map("brand_id")
-  modelId    String?          @map("model_id")
+  categoryId  String?          @map("category_id")
+  deviceId    String?          @map("device_id")
+  brandId     String?          @map("brand_id")
+  modelId     String?          @map("model_id")
 
-  categories ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  devices    Device?          @relation(fields: [deviceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  brands     Brand?           @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  models     Model?           @relation(fields: [modelId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  categories  ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  devices     Device?          @relation(fields: [deviceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  brands      Brand?           @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  models      Model?           @relation(fields: [modelId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("discounts")
 }
 
 model Model {
-  id        String     @id @default(cuid())
+  id          String     @id @default(cuid())
 
-  name      String
-  products  Product[]
-  discounts Discount[]
+  name        String
+  products    Product[]
+  discounts   Discount[]
 
   @@map("models")
 }
 
 model ProductCategory {
-  id        String     @id @default(cuid())
+  id          String     @id @default(cuid())
 
-  name      String
-  products  Product[]
-  discounts Discount[]
+  name        String
+  imageUrl    String?
+  products    Product[]
+  discounts   Discount[]
 
   @@map("product_categories")
 }
@@ -135,9 +157,12 @@ model Product {
   name       String
   price      Decimal          @db.Decimal(10,2)
   count      Int
-  barcodes   String
+  barcode    String
   image      Bytes?
+  
   cart       Cart[]
+  wishlist   WishList[]
+  orders     Order[]
 
   categoryId String?          @map("category_id")
   deviceId   String?          @map("device_id")
@@ -149,5 +174,30 @@ model Product {
   brand      Brand?           @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   model      Model?           @relation(fields: [modelId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  createdAt DateTime @default(now()) @map("created_at")
+
   @@map("products")
+}
+
+model Order {
+  id                 Int          @id @default(autoincrement())
+
+  customerName       String       @map("customer_name") 
+  customerEmail      String       @map("customer_email")
+  customerPhone      String       @map("customer_phone")
+  address            String?
+  getting            String
+  payment            String       
+  userId             String?      @map("user_id")
+  productId          String       @map("product_id")
+  count              Int
+  total              Decimal      @db.Decimal(10,2)
+
+  user               User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product            Product      @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+
+  @@map("orders")
 }

@@ -8,9 +8,12 @@ import { CartModule } from './cart/cart.module'
 import { ProductModule } from './product/product.module'
 import { ProductCategoryModule } from './product-category/product-category.module';
 import { DeviceModule } from './device/device.module';
+import { WishListModule } from './wish-list/wish-list.module';
+import { EmailModule } from './email/email.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
-	imports: [AuthModule, UserModule, ProductModule, PostModule, CartModule, ProductCategoryModule, DeviceModule],
+	imports: [AuthModule, UserModule, ProductModule, PostModule, CartModule, ProductCategoryModule, DeviceModule, WishListModule, EmailModule, OrderModule],
 	controllers: [AppController],
 	providers: [AppService]
 })

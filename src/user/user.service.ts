@@ -5,6 +5,8 @@ import {
 	NotFoundException
 } from '@nestjs/common'
 
+import { hash } from 'argon2'
+
 import { PrismaService } from 'src/prisma.service'
 import type { CreateUserDto } from './dto/create-user.dto'
 import type { UpdateUserDto } from './dto/update-user.dto'
@@ -15,22 +17,21 @@ export class UserService {
 
 	async create(dto: CreateUserDto) {
 		const user = await this.prisma.user.findUnique({
-			where: { phone: dto.phone }
+			where: { email: dto.email }
 		})
 
-		if (user)
-			throw new BadRequestException(
-				'Пользователь с указанным номером телефона уже существует'
-			)
+		if (user) throw new BadRequestException('Такой пользователь уже существует')
 
 		const data = {
-			name: dto.name || null,
-			phone: dto.phone
+			name: dto.name,
+			email: dto.email,
+			phone: dto.phone,
+			password: await hash(dto.password)
 		}
 
-		return this.prisma.user.create({
-			data
-		})
+		const { password, ...response } = await this.prisma.user.create({ data })
+
+		return response
 	}
 
 	async getAll() {
@@ -44,24 +45,21 @@ export class UserService {
 
 		if (!user) throw new NotFoundException('Пользователь не найден')
 
-		return user
+		const { password, ...response } = user
+
+		return response
 	}
 
-	async getByPhone(phone: string) {
+	async getByEmail(email: string) {
 		const user = await this.prisma.user.findUnique({
-			where: { phone }
+			where: { email }
 		})
 
-		return user
-	}
+		if (!user) throw new NotFoundException('Пользователь не найден')
 
-	async getByCondition(userId: string) {
-		const user = await this.prisma.user.findUnique({
-			where: { id: userId },
-			select: { role: true }
-		})
+		const { password, ...response } = user
 
-		return user
+		return response
 	}
 
 	async update(id: string, dto: UpdateUserDto) {
@@ -77,16 +75,23 @@ export class UserService {
 			if (user) throw new ConflictException('Указанный номер телефона занят')
 		}
 
-		const response = {
-			name: dto.name || null,
-			email: dto.email || null,
-			phone: dto.phone
+		const data = {
+			name: dto.name,
+			email: dto.email,
+			phone: dto.phone,
+			password: dto.password
 		}
 
-		return this.prisma.user.update({
+		if (dto.password) {
+			data.password = await hash(dto.password)
+		}
+
+		const { password, ...response } = await this.prisma.user.update({
 			where: { id },
-			data: response
+			data
 		})
+
+		return response
 	}
 
 	async remove(id: string) {

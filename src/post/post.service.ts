@@ -4,6 +4,8 @@ import {
 	NotFoundException
 } from '@nestjs/common'
 
+import * as cheerio from 'cheerio'
+
 import { PrismaService } from 'src/prisma.service'
 import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
@@ -24,10 +26,19 @@ export class PostService {
 				'У пользователя недостаточно прав для выполнения этой функции'
 			)
 
+		let imageUrl = dto.imageUrl
+
+		const $ = cheerio.load(dto.content)
+		const image = $('img').first()
+
+		if (image.length) {
+			imageUrl = image.attr('src')
+		}
+
 		const data = {
 			title: dto.title,
 			content: dto.content,
-			imageUrl: dto.imageUrl,
+			imageUrl: imageUrl,
 			videoUrl: dto.videoUrl,
 			isPublic: dto.isPublic
 		}
@@ -53,7 +64,17 @@ export class PostService {
 
 		const count = await this.prisma.post.count()
 
-		return { items: posts, count }
+		const items = posts.map((post) => {
+			return {
+				...post,
+				content:
+					post.content.length > 200
+						? `${post.content.slice(0, 200)}...`
+						: post.content
+			}
+		})
+
+		return { items, count }
 	}
 
 	async getMy(userId: string, params?: PostParamsDto) {
@@ -70,7 +91,17 @@ export class PostService {
 
 		const count = await this.prisma.post.count()
 
-		return { items: posts, count }
+		const items = posts.map((post) => {
+			return {
+				...post,
+				content:
+					post.content.length > 200
+						? `${post.content.slice(0, 200)}...`
+						: post.content
+			}
+		})
+
+		return { items, count }
 	}
 
 	async getOne(id: string) {

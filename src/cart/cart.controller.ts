@@ -23,16 +23,16 @@ export class CartController {
 		return this.cartService.create(userId, dto)
 	}
 
-	@Get()
+	@Get('me')
 	@Auth()
 	getAll(@User('id') userId: string) {
 		return this.cartService.getAll(userId)
 	}
 
-	@Get(':id')
+	@Get('me/count')
 	@Auth()
-	getOne(@Param('id') id: string, @User('id') userId: string) {
-		return this.cartService.getOne(id, userId)
+	getCount(@User('id') userId: string) {
+		return this.cartService.getCount(userId)
 	}
 
 	@Patch(':id')
@@ -53,7 +53,7 @@ export class CartController {
 
 	@Delete()
 	@Auth()
-	clear(@User('id') userId: string) {
-		return this.cartService.clear(userId)
+	reset(@User('id') userId: string) {
+		return this.cartService.reset(userId)
 	}
 }

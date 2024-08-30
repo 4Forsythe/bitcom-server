@@ -24,6 +24,7 @@ export class AuthController {
 		@Res({ passthrough: true }) res: Response
 	) {
 		const { refreshToken, ...response } = await this.authService.login(dto)
+
 		this.authService.createRefreshToken(res, refreshToken)
 
 		return response
@@ -53,17 +54,27 @@ export class AuthController {
 	}
 
 	@Post('register')
-	async register(@Body() dto: AuthRegisterDto) {
-		const response = await this.authService.register(dto)
+	async register(
+		@Body() dto: AuthRegisterDto,
+		@Res({ passthrough: true }) res: Response
+	) {
+		const { refreshToken, ...response } = await this.authService.register(dto)
+
+		this.authService.createRefreshToken(res, refreshToken)
 
 		return response
 	}
 
 	@Post('send-code')
-	async generateCode(@Body() dto: AuthRegisterDto) {
-		await this.authService.sendCode(dto.phone)
+	async sendCode(@Body() dto: AuthLoginDto) {
+		await this.authService.sendCode(dto.email)
 
 		return true
+	}
+
+	@Post('verify')
+	async verify(@Body() dto: AuthLoginDto) {
+		await this.authService.verify(dto.email, dto.code)
 	}
 
 	@Post('logout')

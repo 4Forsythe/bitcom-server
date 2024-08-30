@@ -38,14 +38,24 @@ export class CartService {
 		})
 
 		if (!cart.length) {
-			return { items: [], count: 0 }
+			return { items: [], count: 0, total: 0 }
 		}
 
 		const count = await this.prisma.cart.count({
 			where: { userId }
 		})
 
-		return { items: cart, count }
+		const total = cart.reduce((sum, item) => {
+			return sum + Number(item.product.price) * item.count
+		}, 0)
+
+		return { items: cart, count, total }
+	}
+
+	async getCount(userId: string) {
+		return this.prisma.cart.count({
+			where: { userId }
+		})
 	}
 
 	async getOne(id: string, userId: string) {
@@ -80,7 +90,7 @@ export class CartService {
 		})
 	}
 
-	async clear(userId: string) {
+	async reset(userId: string) {
 		return this.prisma.cart.deleteMany({
 			where: { userId }
 		})

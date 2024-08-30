@@ -1,12 +1,27 @@
-import { IsString, IsOptional, IsPhoneNumber, MaxLength } from 'class-validator'
+import {
+	IsString,
+	IsOptional,
+	IsPhoneNumber,
+	MaxLength,
+	IsEmail,
+	MinLength,
+	IsNumber
+} from 'class-validator'
 
 export class AuthRegisterDto {
 	@IsString()
-	@IsPhoneNumber('RU')
-	phone: string
+	@IsOptional()
+	@MaxLength(48)
+	name?: string
+
+	@IsEmail()
+	email: string
 
 	@IsString()
-	@IsOptional()
-	@MaxLength(20)
-	name?: string
+	@MinLength(5)
+	@MaxLength(32)
+	password: string
+
+	@IsNumber()
+	code: number
 }
