@@ -5,14 +5,17 @@ import {
 	Post,
 	Body,
 	UnauthorizedException,
-	Param
+	Query,
+	Get
 } from '@nestjs/common'
 
-import { Request, Response } from 'express'
+import type { Request, Response } from 'express'
 
 import { AuthService } from './auth.service'
 import { AuthLoginDto } from './dto/auth-login.dto'
 import { AuthRegisterDto } from './dto/auth-register.dto'
+import { AuthVerifyDto } from './dto/auth-verify.dto'
+import { AuthSendCodeDto } from './dto/auth-send-code.dto'
 
 @Controller('auth')
 export class AuthController {
@@ -66,15 +69,17 @@ export class AuthController {
 	}
 
 	@Post('send-code')
-	async sendCode(@Body() dto: AuthLoginDto) {
-		await this.authService.sendCode(dto.email)
+	async sendCode(@Query() params: AuthSendCodeDto) {
+		await this.authService.sendCode(params.email)
 
 		return true
 	}
 
-	@Post('verify')
-	async verify(@Body() dto: AuthLoginDto) {
-		await this.authService.verify(dto.email, dto.code)
+	@Get('verify')
+	async verify(@Query() params: AuthVerifyDto, @Res() res: Response) {
+		await this.authService.verify(params.code, params.userId)
+
+		return res.redirect(process.env.SITE_BASE_URL)
 	}
 
 	@Post('logout')

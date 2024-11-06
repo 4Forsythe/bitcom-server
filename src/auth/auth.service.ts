@@ -1,13 +1,14 @@
 import {
 	Injectable,
-	NotFoundException,
 	BadRequestException,
-	UnauthorizedException
+	UnauthorizedException,
+	ForbiddenException
 } from '@nestjs/common'
 
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 
+import { verify } from 'argon2'
 import { Response } from 'express'
 import { addMinutes } from 'date-fns'
 
@@ -15,22 +16,20 @@ import { UserService } from 'src/user/user.service'
 import { PrismaService } from 'src/prisma.service'
 import { AuthLoginDto } from './dto/auth-login.dto'
 import { AuthRegisterDto } from './dto/auth-register.dto'
-import { verify } from 'argon2'
-import { EmailService } from 'src/email/email.service'
+import { sendMail } from 'src/lib/send-mail'
 
 @Injectable()
 export class AuthService {
 	constructor(
 		private jwt: JwtService,
 		private userService: UserService,
-		private emailService: EmailService,
 		private configService: ConfigService,
 		private prisma: PrismaService
 	) {}
 
-	REFRESH_TOKEN_NAME = 'refreshToken'
+	REFRESH_TOKEN_NAME = 'REFRESH_TOKEN'
 	EXPIRE_DAY_REFRESH_TOKEN = 30
-	SEND_CODE_COOLDOWN = 0.3
+	SEND_CODE_COOLDOWN = 1
 
 	async login(dto: AuthLoginDto) {
 		const { password, ...user } = await this.validateUser(dto)
@@ -41,14 +40,15 @@ export class AuthService {
 	}
 
 	async register(dto: AuthRegisterDto) {
-		await this.verify(dto.email, dto.code)
+		const response = await this.prisma.user.findUnique({
+			where: { email: dto.email }
+		})
+
+		if (response) throw new BadRequestException('Введенный E-mail уже занят')
 
 		const user = await this.userService.create(dto)
 
-		await this.prisma.user.update({
-			where: { email: user.email },
-			data: { isActive: true }
-		})
+		await this.sendCode(user.email)
 
 		const tokens = this.issueTokens(user.id)
 
@@ -60,101 +60,125 @@ export class AuthService {
 			where: { email }
 		})
 
-		if (user)
-			throw new BadRequestException('Такой пользователь уже зарегистрирован')
+		if (!user) throw new BadRequestException('Пользователь не найден')
 
-		const cooldown = await this.checkCooldown(email)
+		const code = await this.generateCode(user.id)
 
-		if (cooldown > 0)
-			throw new BadRequestException(`Повторите попытку через ${cooldown} сек.`)
-
-		const code = await this.generateCode(email)
-
-		await this.emailService.create({
+		await sendMail({
 			to: email,
-			title: 'Код подтверждения',
-			content: `Ваш код подтверждения bitcom63.ru — ${code}.`
+			subject: 'Подтвердите ваш E-mail',
+			html: {
+				path: 'src/templates/confirm-email.template.html',
+				replacements: {
+					code: String(code),
+					returnUrl: `${process.env.BASE_URL}/auth/verify?code=${code}&userId=${user.id}`
+				}
+			}
 		})
+	}
+
+	async generateCode(userId: string) {
+		const code = Math.floor(100000 + Math.random() * 900000)
+
+		await this.prisma.userCode.upsert({
+			where: { userId },
+			create: {
+				code: String(code),
+				userId,
+				expiresAt: addMinutes(new Date(), 60)
+			},
+			update: {
+				code: String(code),
+				userId,
+				expiresAt: addMinutes(new Date(), 60)
+			}
+		})
+
+		return code
+	}
+
+	async checkCooldown(userId: string) {
+		const userCode = await this.prisma.userCode.findUnique({
+			where: { userId, attempt: { gte: 5 } }
+		})
+
+		if (!userCode) return
+
+		const now = new Date()
+		const firstCooldown = addMinutes(userCode.lastAttemptAt, 5)
+
+		if (userCode.lastAttemptAt && now < firstCooldown) {
+			const period = this.generateCooldown(userCode.attempt)
+			const cooldown = addMinutes(userCode.lastAttemptAt, period)
+
+			if (now < cooldown) {
+				const seconds = Math.floor((cooldown.getTime() - now.getTime()) / 1000)
+
+				throw new ForbiddenException(
+					`Превышено количество попыток. Попробуйте позже`
+				)
+			}
+		}
+
+		return
 	}
 
 	private generateCooldown(attempt: number) {
 		const timing = this.SEND_CODE_COOLDOWN
 
-		const periods = [timing, timing * 1, timing * 1, timing * 1]
+		const periods = [timing, timing * 5, timing * 5, timing * 5]
 
 		return periods[Math.min(attempt, periods.length - 1)]
 	}
 
-	async checkCooldown(email: string) {
-		const code = await this.prisma.userCode.findUnique({
-			where: { email }
+	async verify(code: string, userId: string) {
+		const user = await this.prisma.user.findUnique({
+			where: { id: userId }
 		})
 
-		if (code) {
-			const now = new Date()
+		const userCode = await this.prisma.userCode.findUnique({
+			where: { userId }
+		})
 
-			if (code.lastAttemptAt) {
-				const period = this.generateCooldown(code.attempt)
-				const cooldown = addMinutes(code.lastAttemptAt, period)
+		if (!user) throw new BadRequestException('Пользователь не найден')
+		if (!userCode) throw new BadRequestException('Код подтверждения не найден')
 
-				if (now < cooldown) {
-					return Math.floor((cooldown.getTime() - now.getTime()) / 1000)
-				}
-			}
-		}
+		if (user.isActive)
+			throw new BadRequestException('Пользователь уже подтвержден')
 
-		return 0
-	}
+		await this.checkCooldown(user.id)
 
-	async verify(email: string, code: number) {
-		const user = await this.prisma.user.findUnique({ where: { email } })
-
-		if (user)
-			throw new BadRequestException('Такой пользователь уже зарегистрирован')
-
-		const response = await this.prisma.userCode.findFirst({
+		const isValidCode = await this.prisma.userCode.findUnique({
 			where: {
 				code,
-				email,
+				userId: user.id,
 				expiresAt: {
 					gt: new Date()
 				}
 			}
 		})
 
-		if (!response)
-			throw new BadRequestException('Введен неверный код активации')
-
-		await this.prisma.userCode.delete({
-			where: { id: response.id }
-		})
-
-		return true
-	}
-
-	async generateCode(email: string) {
-		const code = Math.floor(100000 + Math.random() * 900000)
-
-		await this.prisma.userCode.upsert({
-			where: { email },
-			create: {
-				code,
-				email,
-				attempt: 1,
-				lastAttemptAt: new Date(),
-				expiresAt: addMinutes(new Date(), 10)
-			},
-			update: {
-				code,
-				attempt: {
-					increment: 1
-				},
-				lastAttemptAt: new Date(),
-				expiresAt: addMinutes(new Date(), 10)
+		await this.prisma.userCode.update({
+			where: { userId: user.id },
+			data: {
+				attempt: { increment: 1 },
+				lastAttemptAt: new Date()
 			}
 		})
 
-		return code
+		if (!isValidCode)
+			throw new BadRequestException('Введен неверный код активации')
+
+		await this.prisma.userCode.delete({
+			where: { id: userCode.id }
+		})
+
+		return this.prisma.user.update({
+			where: { id: user.id },
+			data: {
+				isActive: true
+			}
+		})
 	}
 
 	private issueTokens(userId: string) {
@@ -176,32 +200,13 @@ export class AuthService {
 			where: { email: dto.email }
 		})
 
-		if (!user) throw new NotFoundException('Пользователь не найден')
+		if (!user) throw new UnauthorizedException('Такого пользователя нет')
 
-		if (!user.isActive && !dto.code) {
-			throw new BadRequestException('Учетная запись нуждается в активации')
-		}
+		const isValid = await verify(user.password, dto.password)
 
-		if (dto.code) {
-			const isValid = await this.verify(user.email, dto.code)
+		if (!isValid) throw new UnauthorizedException('Неверный логин или пароль')
 
-			if (!isValid)
-				throw new UnauthorizedException('Введен неверный код активации')
-
-			return user
-		}
-
-		if (user.isActive && dto.password) {
-			if (!user.password) {
-				throw new UnauthorizedException('Введен неверный пароль')
-			}
-
-			const isValid = await verify(user.password, dto.password)
-
-			if (!isValid) throw new UnauthorizedException('Введен неверный пароль')
-
-			return user
-		}
+		return user
 	}
 
 	async getTokens(refreshToken: string) {
@@ -225,7 +230,7 @@ export class AuthService {
 
 		res.cookie(this.REFRESH_TOKEN_NAME, refreshToken, {
 			httpOnly: true,
-			secure: false /* true - только для https */,
+			secure: true /* true - только для https */,
 			domain: this.configService.get('SITE_DOMAIN'),
 			expires: expiresIn,
 			sameSite: 'lax'
@@ -235,7 +240,7 @@ export class AuthService {
 	removeRefreshToken(res: Response) {
 		res.cookie(this.REFRESH_TOKEN_NAME, '', {
 			httpOnly: true,
-			secure: false,
+			secure: true /* true - только для https */,
 			domain: this.configService.get('SITE_DOMAIN'),
 			expires: new Date(0),
 			sameSite: 'lax'

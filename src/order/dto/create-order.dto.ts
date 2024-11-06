@@ -5,45 +5,63 @@ import {
 	MaxLength,
 	IsOptional,
 	IsPhoneNumber,
-	IsNumber
+	IsNumber,
+	IsObject,
+	IsDecimal,
+	IsInt,
+	IsArray
 } from 'class-validator'
 
-enum GettingType {
+export enum OrderStatus {
+	PENDING = 'Обрабатывается',
+	WAITING = 'Ожидает оплаты',
+	PAYED = 'Оплачен',
+	CANCELED = 'Отменен',
+	CREATED = 'Создан',
+	PROCESSING = 'Собирается',
+	READY = 'Готов к выдаче'
+}
+
+export enum OrderGettingMethod {
 	PICKUP = 'Самовывоз'
 }
 
-enum PaymentType {
+export enum OrderPaymentMethod {
+	CARD = 'Банковской картой онлайн',
 	CASH = 'При получении'
 }
 
 export class CreateOrderDto {
 	@IsString()
+	@MinLength(5)
 	@MaxLength(144)
 	customerName: string
 
-	@IsPhoneNumber('RU', { message: 'Только российские номера телефонов' })
-	customerPhone: string
-
 	@IsEmail()
 	customerEmail: string
+
+	@IsPhoneNumber('RU', { message: 'Только российские номера телефонов' })
+	customerPhone: string
 
 	@IsString()
 	@IsOptional()
 	address?: string
 
 	@IsString()
-	getting: GettingType
-
-	@IsString()
-	payment: PaymentType
+	@IsOptional()
+	comment?: string
 
 	@IsString()
 	@IsOptional()
-	userId?: string
+	paymentId?: string
 
-	@IsNumber()
-	count: number
+	@IsString()
+	@IsOptional()
+	status?: OrderStatus
 
-	@IsNumber()
-	total: number
+	@IsString()
+	gettingMethod: OrderGettingMethod
+
+	@IsString()
+	paymentMethod: OrderPaymentMethod
 }

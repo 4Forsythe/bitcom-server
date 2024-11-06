@@ -6,14 +6,29 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { CartModule } from './cart/cart.module'
 import { ProductModule } from './product/product.module'
-import { ProductCategoryModule } from './product-category/product-category.module';
-import { DeviceModule } from './device/device.module';
-import { WishListModule } from './wish-list/wish-list.module';
-import { EmailModule } from './email/email.module';
-import { OrderModule } from './order/order.module';
+import { ProductCategoryModule } from './product-category/product-category.module'
+import { DeviceModule } from './device/device.module'
+import { WishListModule } from './wishlist/wishlist.module'
+import { OrderModule } from './order/order.module'
+import { PaymentModule } from './payment/payment.module'
+import { ConfigModule } from '@nestjs/config'
+import { MetricsModule } from './metrics/metrics.module'
 
 @Module({
-	imports: [AuthModule, UserModule, ProductModule, PostModule, CartModule, ProductCategoryModule, DeviceModule, WishListModule, EmailModule, OrderModule],
+	imports: [
+		ConfigModule.forRoot(),
+		AuthModule,
+		UserModule,
+		ProductModule,
+		PostModule,
+		CartModule,
+		ProductCategoryModule,
+		DeviceModule,
+		WishListModule,
+		OrderModule,
+		PaymentModule,
+		MetricsModule
+	],
 	controllers: [AppController],
 	providers: [AppService]
 })

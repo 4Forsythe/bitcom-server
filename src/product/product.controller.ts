@@ -12,6 +12,16 @@ export class ProductController {
 		return this.productService.getAll(params)
 	}
 
+	@Get('similar/:id')
+	getSimilar(@Param('id') id: string, @Query() params?: { take: number }) {
+		return this.productService.getSimilar(id, params)
+	}
+
+	@Get('total')
+	getTotal() {
+		return this.productService.getTotal()
+	}
+
 	@Post()
 	getByIds(@Body() dto: { ids: string[] }) {
 		return this.productService.getByIds(dto.ids)

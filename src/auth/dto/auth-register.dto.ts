@@ -1,11 +1,9 @@
 import {
+	IsEmail,
 	IsString,
 	IsOptional,
-	IsPhoneNumber,
 	MaxLength,
-	IsEmail,
-	MinLength,
-	IsNumber
+	MinLength
 } from 'class-validator'
 
 export class AuthRegisterDto {
@@ -18,10 +16,7 @@ export class AuthRegisterDto {
 	email: string
 
 	@IsString()
-	@MinLength(5)
+	@MinLength(4)
 	@MaxLength(32)
 	password: string
-
-	@IsNumber()
-	code: number
 }

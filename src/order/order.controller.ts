@@ -1,17 +1,21 @@
 import {
 	Controller,
-	Get,
+	Req,
 	Post,
 	Body,
-	Patch,
+	Query,
 	Param,
-	Delete
+	Get,
+	Patch
 } from '@nestjs/common'
 
 import { OrderService } from './order.service'
 import { CreateOrderDto } from './dto/create-order.dto'
 import { Auth } from 'src/auth/auth.decorator'
 import { User } from 'src/user/user.decorator'
+import { UpdateOrderDto } from './dto/update-order.dto'
+import { Request } from 'express'
+import { OrderParamsDto } from './dto/order-params.dto'
 
 @Controller('order')
 export class OrderController {
@@ -19,25 +23,34 @@ export class OrderController {
 
 	@Post()
 	@Auth()
-	create(@User('id') userId: string, @Body() dto: CreateOrderDto) {
-		console.log(dto)
-		return this.orderService.create(userId, dto)
+	create(
+		@Req() req: Request,
+		@User('id') userId: string,
+		@Body() dto: CreateOrderDto
+	) {
+		return this.orderService.create(req, userId, dto)
 	}
 
-	// @Get()
-	// findAll() {
-	// 	return this.orderService.findAll()
-	// }
+	@Get('me')
+	@Auth()
+	getAll(@User('id') userId: string, @Query() params?: OrderParamsDto) {
+		return this.orderService.getAll(userId, params)
+	}
+
+	@Get('total')
+	getTotal() {
+		return this.orderService.getTotal()
+	}
 
 	// @Get(':id')
 	// findOne(@Param('id') id: string) {
 	// 	return this.orderService.findOne(+id)
 	// }
 
-	// @Patch(':id')
-	// update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-	// 	return this.orderService.update(+id, updateOrderDto)
-	// }
+	@Patch(':id')
+	update(@Param('id') id: string, @Body() dto: UpdateOrderDto) {
+		return this.orderService.update(id, dto)
+	}
 
 	// @Delete(':id')
 	// remove(@Param('id') id: string) {

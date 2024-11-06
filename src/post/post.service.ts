@@ -82,7 +82,7 @@ export class PostService {
 
 		const posts = await this.prisma.post.findMany({
 			where: { userId },
-			take: +take || 20,
+			take: +take || 10,
 			skip: +skip || 0,
 			orderBy: {
 				[sortBy]: orderBy

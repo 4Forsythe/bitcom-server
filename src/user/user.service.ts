@@ -38,6 +38,18 @@ export class UserService {
 		return this.prisma.user.findMany()
 	}
 
+	async getProfile(id: string) {
+		const user = await this.prisma.user.findUnique({
+			where: { id }
+		})
+
+		if (!user) return null
+
+		const { password, ...response } = user
+
+		return response
+	}
+
 	async getOne(id: string) {
 		const user = await this.prisma.user.findUnique({
 			where: { id }

@@ -1,13 +1,10 @@
-import * as dotenv from 'dotenv'
 import * as nodemailer from 'nodemailer'
-
-dotenv.config()
 
 const user = process.env.EMAIL_USER
 const pass = process.env.EMAIL_PASSWORD
 
 export const transporter = nodemailer.createTransport({
-	service: 'yandex',
+	service: 'Yandex',
 	port: 465,
 	secure: true,
 	auth: {
@@ -20,5 +17,5 @@ export const transporter = nodemailer.createTransport({
 })
 
 export const mailOptions = {
-	from: `Bitcom <${user}>`
+	from: `БитКом <${user}>`
 }

@@ -1,9 +1,10 @@
-import { IsNumber, IsString } from 'class-validator'
+import { IsInt, IsOptional, IsString } from 'class-validator'
 
 export class CreateCartDto {
 	@IsString()
 	productId: string
 
-	@IsNumber()
-	count: number
+	@IsInt()
+	@IsOptional()
+	count?: number
 }

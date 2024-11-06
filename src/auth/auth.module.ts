@@ -9,13 +9,11 @@ import { UserModule } from 'src/user/user.module'
 import { AuthController } from './auth.controller'
 import { AuthService } from './auth.service'
 import { PrismaService } from 'src/prisma.service'
-import { EmailModule } from 'src/email/email.module'
 
 @Module({
 	exports: [AuthService],
 	imports: [
 		UserModule,
-		EmailModule,
 		ConfigModule,
 		JwtModule.registerAsync({
 			imports: [ConfigModule],
